@@ -1,19 +1,29 @@
 version: "3"
 
 services:
-  api:
-    build: api
-    network_mode: "host"
-    ports: 
-      - "3000:3000"
-    depends_on:
-      - db
   db:
     build: db
     ports:
       - "6379:6379"
     volumes:
       - .data:/data
+
+  api:
+    build: api
+    ports: 
+      - "3000:3000"
+    depends_on:
+      - db
+      
+  redis_expo:
+    image: oliver006/redis_exporter:latest
+    command:
+      - '--redis.addr=redis://db:6379'
+    ports:
+      - "9121:9121"
+    depends_on:
+      - db
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -25,12 +35,17 @@ services:
     depends_on:
       - api
       - redis_expo
-  
-  redis_expo:
-    image: oliver006/redis_exporter:latest
-    network_mode: "host"
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana-data:/var/lib/grafana
     ports:
-      - "9121:9121"
+      - "3001:3000"
     depends_on:
-      - db
+      - prometheus
+      
+volumes:
+  grafana-data:
 
